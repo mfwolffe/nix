@@ -13,7 +13,7 @@
     enable = true;
     packages = [
       # Rust
-      "fackr" "fussr" "wezztershier-rust" "eyescore" "arco"
+      "fackr" "fussr" "wezztershier-rust" "eyescore" "arco" "hyprkvm"
       # Go
       "parrot-cli" "shellp"
       # Fortran (FPM)
@@ -50,6 +50,48 @@
 
   # Enable networking
   networking.networkmanager.enable = true;
+
+  # Prioritize wired over WiFi (lower metric = higher priority)
+  networking.networkmanager.ensureProfiles.profiles = {
+    "DogNet" = {
+      connection = {
+        id = "DogNet";
+        type = "wifi";
+      };
+      wifi = {
+        ssid = "DogNet";
+        mode = "infrastructure";
+      };
+      wifi-security = {
+        key-mgmt = "wpa-psk";
+      };
+      ipv4 = {
+        method = "auto";
+        route-metric = 700;
+      };
+      ipv6 = {
+        method = "auto";
+        route-metric = 700;
+      };
+    };
+    "Wired connection 1" = {
+      connection = {
+        id = "Wired connection 1";
+        type = "ethernet";
+      };
+      ipv4 = {
+        method = "auto";
+        route-metric = 50;
+      };
+      ipv6 = {
+        method = "auto";
+        route-metric = 50;
+      };
+    };
+  };
+
+  # SSL/TLS certificates
+  security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
 
   # Set your time zone.
   time.timeZone = "America/New_York";
@@ -208,6 +250,16 @@
     enableFishIntegration = true;
   };
 
+  # Enable nix-ld for running non-NixOS binaries (needed for Claude Code VSCode extension)
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      stdenv.cc.cc.lib
+      zlib
+      openssl
+    ];
+  };
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
@@ -247,6 +299,9 @@
     networkmanagerapplet  # Network manager tray
     gh                    # GitHub CLI
 
+    # Browsers
+    (vivaldi.override { proprietaryCodecs = true; })  # Chromium-based browser with codecs
+
     # Communication & Collaboration
     slack              # Team messaging
     discord            # Voice/text chat
@@ -255,6 +310,23 @@
     # Development tools
     vscode             # Visual Studio Code
     jetbrains-toolbox  # JetBrains IDE manager
+
+    # JetBrains IDEs
+    # jetbrains.aqua                # Test automation IDE (discontinued, will be removed in NixOS 26.05)
+    jetbrains.clion                 # C/C++ IDE
+    jetbrains.datagrip              # Database IDE
+    jetbrains.dataspell             # Data science IDE
+    jetbrains.gateway               # Remote development gateway
+    jetbrains.goland                # Go IDE
+    jetbrains.idea                  # Java/Kotlin IDE (Ultimate)
+    jetbrains.mps                   # Meta Programming System
+    jetbrains.phpstorm              # PHP IDE
+    jetbrains.pycharm               # Python IDE (Professional)
+    jetbrains.rider                 # .NET IDE
+    jetbrains.ruby-mine             # Ruby IDE
+    jetbrains.rust-rover            # Rust IDE
+    jetbrains.webstorm              # JavaScript/TypeScript IDE
+    # jetbrains.writerside          # Documentation IDE (discontinued, will be removed in NixOS 26.05)
 
     # Build tools
     gnumake
@@ -285,8 +357,8 @@
     alsa-lib
     alsa-lib.dev
 
-    # Python with pipx for isolated CLI tool installs
-    python3
+    # Python with pip and pipx
+    (python3.withPackages (ps: with ps; [ pip setuptools wheel ]))
     pipx
 
     # Libraries commonly needed for builds
@@ -321,6 +393,14 @@
     protonup-qt     # Manage Proton-GE versions easily
     lutris          # Game launcher for non-Steam games (GOG, Epic, Wine, etc.)
     dualsensectl    # DualSense controller LED/haptic control
+
+    # Media creation
+    audacity        # Audio editing
+    reaper          # DAW
+    reaper-reapack-extension  # Reaper package manager
+    reaper-sws-extension      # Reaper plugin extension
+    gimp            # Image editing
+    kdePackages.kdenlive  # Video editing
   ];
 
   # Fonts (Nerd Font for waybar icons)
@@ -341,6 +421,12 @@
   # Enable Tailscale VPN
   services.tailscale.enable = true;
 
+  # Waydroid (Android container for running Android apps like Kindle)
+  virtualisation.waydroid = {
+    enable = true;
+    package = pkgs.waydroid-nftables;  # Patched for modern kernels using nftables
+  };
+
   # Ollama with NVIDIA GPU support
   services.ollama = {
     enable = true;
@@ -348,7 +434,13 @@
   };
 
   # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = true;  # Enable password authentication
+    };
+    openFirewall = true;
+  };
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
