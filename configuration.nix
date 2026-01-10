@@ -13,7 +13,7 @@
     enable = true;
     packages = [
       # Rust
-      "fackr" "fussr" "wezztershier-rust" "eyescore" "arco" "hyprkvm"
+      "fackr" "fussr" "wezztershier-rust" "eyescore" "arco" "hyprkvm" "firp"
       # Go
       "parrot-cli" "shellp"
       # Fortran (FPM)
@@ -78,6 +78,22 @@
       connection = {
         id = "Wired connection 1";
         type = "ethernet";
+        interface-name = "enp111s0";
+      };
+      ipv4 = {
+        method = "auto";
+        route-metric = 50;
+      };
+      ipv6 = {
+        method = "auto";
+        route-metric = 50;
+      };
+    };
+    "Wired connection 2" = {
+      connection = {
+        id = "Wired connection 2";
+        type = "ethernet";
+        interface-name = "enp112s0";
       };
       ipv4 = {
         method = "auto";
@@ -89,6 +105,24 @@
       };
     };
   };
+
+  # Ensure all ethernet connections have higher priority than WiFi
+  networking.networkmanager.dispatcherScripts = [{
+    type = "basic";
+    source = pkgs.writeText "nm-prioritize-ethernet" ''
+      #!/bin/sh
+      # Ensure all ethernet connections use metric 50, WiFi uses 700
+      if [ "$1" != "lo" ]; then
+        if [ "$2" = "up" ]; then
+          INTERFACE_TYPE=$(nmcli -t -f GENERAL.TYPE device show "$1" | cut -d: -f2)
+          if [ "$INTERFACE_TYPE" = "ethernet" ]; then
+            nmcli connection modify "$(nmcli -t -f GENERAL.CONNECTION device show "$1" | cut -d: -f2)" \
+              ipv4.route-metric 50 ipv6.route-metric 50 2>/dev/null || true
+          fi
+        fi
+      fi
+    '';
+  }];
 
   # SSL/TLS certificates
   security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];

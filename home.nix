@@ -54,7 +54,7 @@
     '';
     interactiveShellInit = ''
       set fish_greeting  # Disable greeting
-      pay-respects --alias | source
+      pay-respects fish | source
     '';
     shellAliases = {
       ll = "ls -la";
@@ -114,8 +114,6 @@
     attachExistingSession = false;
     settings = {
       theme = "minimal";
-      default_layout = "compact";
-      default_shell = "${pkgs.fish}/bin/fish";
       pane_frames = false;
       simplified_ui = true;
       default_mode = "normal";
@@ -126,6 +124,8 @@
     };
     # KDL config appended after settings
     extraConfig = ''
+      default_layout "compact"
+
       // Minimal theme matching tmux config
       themes {
         minimal {
