@@ -34,6 +34,9 @@
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
+  # Disable PCIe ASPM to prevent link instability with RTX 4090
+  boot.kernelParams = [ "pcie_aspm=off" ];
+
   # Disable hibernation (causes unrecoverable state with NVIDIA)
   systemd.sleep.extraConfig = ''
     AllowHibernation=no
@@ -148,26 +151,20 @@
   # Enable the X11 windowing system.
   services.xserver.enable = true;
 
-  # Display manager (greetd + tuigreet - minimal TUI greeter)
-  services.greetd = {
+  # Display manager - SDDM (supports both X11 and Wayland)
+  services.displayManager.sddm = {
     enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --remember-session --sessions ${config.services.displayManager.sessionData.desktops}/share/wayland-sessions";
-        user = "greeter";
-      };
-    };
-  };
-
-  # Prevent console spam from greetd
-  systemd.services.greetd.serviceConfig = {
-    Type = "idle";
-    StandardInput = "tty";
-    StandardOutput = "tty";
-    StandardError = "journal";
-    TTYReset = true;
-    TTYVHangup = true;
-    TTYVTDisallocate = true;
+    theme = "breeze";
+    wayland.enable = true;
+    package = pkgs.kdePackages.sddm;
+    extraPackages = with pkgs; [
+      kdePackages.breeze
+      kdePackages.breeze-icons
+      kdePackages.qtsvg
+      kdePackages.qtmultimedia
+      kdePackages.sddm-kcm        # Contains breeze SDDM theme
+      kdePackages.plasma-workspace # Plasma integration for themes
+    ];
   };
   services.desktopManager.gnome.enable = true;
 
@@ -181,9 +178,9 @@
   services.xserver.windowManager.i3 = {
     enable = true;
     extraPackages = with pkgs; [
-      dmenu      # Application launcher
-      i3status   # Status bar
-      i3lock     # Screen locker
+      rofi           # Application launcher
+      i3status-rust  # Status bar (Rust rewrite, more features)
+      i3lock         # Screen locker
     ];
   };
 
@@ -207,6 +204,12 @@
       nvidiaSettings = true;  # Adds nvidia-settings GUI
       package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
+
+  # NVIDIA kernel module options - disable power management features
+  boot.extraModprobeConfig = ''
+    options nvidia NVreg_DynamicPowerManagement=0x00
+    options nvidia NVreg_EnableGpuFirmware=0
+  '';
   hardware.graphics.enable = true;
   hardware.graphics.enable32Bit = true;  # 32-bit libs for Steam/games
 
@@ -220,6 +223,8 @@
     LIBVA_DRIVER_NAME = "nvidia";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
     TERMINAL = "alacritty";
+    # Force NVIDIA-only Vulkan to prevent Mesa conflicts
+    VK_ICD_FILENAMES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json:/run/opengl-driver-32/share/vulkan/icd.d/nvidia_icd.i686.json";
   };
 
   # Enable CUPS to print documents.
@@ -319,6 +324,14 @@
     alacritty          # Terminal emulator
     wofi               # Application launcher
     waybar             # Status bar
+
+    # i3/X11 utilities
+    xorg.libxcb        # XCB library (for gar WM development)
+    picom              # X11 compositor (transparency, shadows)
+    feh                # Wallpaper setter
+    maim               # Screenshot tool (X11)
+    xdotool            # X11 automation (for window screenshots)
+    xclip              # Clipboard tool (X11)
     wlogout            # Logout menu
     dunst              # Notification daemon
     hyprpaper          # Wallpaper utility
