@@ -13,7 +13,7 @@
     enable = true;
     packages = [
       # Rust
-      "fackr" "fussr" "wezztershier-rust" "eyescore" "arco" "hyprkvm" "firp"
+      "fackr" "fussr" "wezztershier-rust" "eyescore" "arco" "hyprkvm" "firp" "gump"
       # Go
       "parrot-cli" "shellp"
       # Fortran (FPM)
@@ -551,6 +551,9 @@
     reaper-sws-extension      # Reaper plugin extension
     gimp            # Image editing
     kdePackages.kdenlive  # Video editing
+
+    # Office
+    libreoffice     # Office suite (Writer, Calc, Impress, etc.)
   ];
 
   # Fonts (Nerd Font for waybar icons, Font Awesome for polybar)
