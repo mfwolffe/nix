@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running 'nixos-help').
 
-{ config, pkgs, mfwolffe-pkgs, ... }:
+{ config, pkgs, lib, mfwolffe-pkgs, ... }:
 {
   imports = [
     ./hardware-configuration.nix
@@ -24,6 +24,15 @@
       "gitswitcher" "gitswitch-c" "shtick" "wmswitch"
       # Python
       "wezztershier" "spotify-cue" "waveterm-vis"
+      # Gardesk suite - X11 desktop environment (https://gar.dev)
+      "gar"         # Tiling window manager with Lua config
+      "garbar"      # Status bar with Cairo/Pango rendering
+      "garbg"       # Wallpaper daemon with video support
+      "garshot"     # Screenshot utility
+      "garlock"     # Screen locker with PAM
+      "garlaunch"   # Application launcher
+      "garclip"     # Clipboard manager
+      "gardm"       # Display manager (replacing SDDM)
     ];
   };
 
@@ -151,21 +160,70 @@
   # Enable the X11 windowing system.
   services.xserver.enable = true;
 
-  # Display manager - SDDM (supports both X11 and Wayland)
-  services.displayManager.sddm = {
-    enable = true;
-    theme = "breeze";
-    wayland.enable = true;
-    package = pkgs.kdePackages.sddm;
-    extraPackages = with pkgs; [
-      kdePackages.breeze
-      kdePackages.breeze-icons
-      kdePackages.qtsvg
-      kdePackages.qtmultimedia
-      kdePackages.sddm-kcm        # Contains breeze SDDM theme
-      kdePackages.plasma-workspace # Plasma integration for themes
-    ];
+  # Display manager - gardm (gardesk display manager)
+  # Disable SDDM, use gardm instead
+  services.displayManager.sddm.enable = false;
+
+  # gardm display manager configuration
+  # gardm is installed via mfwolffe-packages, we need to set up the systemd service
+  systemd.services.gardm = {
+    description = "gar Display Manager";
+    after = [ "systemd-user-sessions.service" "getty@tty1.service" "plymouth-quit.service" "systemd-logind.service" ];
+    conflicts = [ "getty@tty1.service" ];
+    wantedBy = [ "graphical.target" ];
+    aliases = [ "display-manager.service" ];
+
+    serviceConfig = {
+      Type = "notify";
+      ExecStart = "${mfwolffe-pkgs.packages.${pkgs.stdenv.hostPlatform.system}.gardm}/bin/gardmd";
+      ExecReload = "/bin/kill -HUP $MAINPID";
+      Restart = "always";
+      RestartSec = 1;
+      PrivateTmp = false;
+    };
   };
+
+  # PAM configuration for gardm
+  security.pam.services.gardm = {
+    allowNullPassword = true;
+    startSession = true;
+  };
+
+  # gardm configuration file
+  environment.etc."gardm/config.toml".text = ''
+    # gardm configuration
+
+    [general]
+    default_session = "gar"
+    greeter = "${mfwolffe-pkgs.packages.${pkgs.stdenv.hostPlatform.system}.gardm}/bin/gardm-greeter"
+    vt = 0
+    display = ":0"
+
+    [greeter]
+    blur_radius = 20
+    blur_brightness = 0.7
+    show_power_buttons = true
+    show_session_selector = true
+    use_garbg_wallpaper = true
+    fallback_wallpaper = "/usr/share/backgrounds/default.jpg"
+
+    [security]
+    allow_empty_password = false
+    lockout_attempts = 5
+    lockout_duration = 300
+  '';
+
+  # Force nvidia driver for X (needed for gardm which spawns Xorg directly)
+  environment.etc."X11/xorg.conf.d/10-nvidia.conf".text = ''
+    Section "Device"
+        Identifier     "nvidia"
+        Driver         "nvidia"
+        BusID          "PCI:1:0:0"
+        Option         "AllowEmptyInitialConfiguration"
+    EndSection
+  '';
+
+  # Keep GNOME desktop manager available as a session option
   services.desktopManager.gnome.enable = true;
 
   # Enable Hyprland
@@ -183,6 +241,13 @@
       i3lock         # Screen locker
     ];
   };
+
+  # gar window manager - tiling WM with Lua config
+  # XSession is provided by the gar package in share/xsessions/gar.desktop
+  # The gar-session wrapper handles systemd integration, picom, etc.
+  services.displayManager.sessionPackages = [
+    mfwolffe-pkgs.packages.${pkgs.stdenv.hostPlatform.system}.gar
+  ];
 
   # XDG portal for screen sharing, file dialogs, etc.
   xdg.portal = {
@@ -253,7 +318,7 @@
   users.users.mfwolffe = {
     isNormalUser = true;
     description = "Matthew Forrester Wolffe";
-    extraGroups = [ "networkmanager" "wheel" "input" ];
+    extraGroups = [ "networkmanager" "wheel" "input" "video" "tty" ];
     shell = pkgs.fish;
     packages = with pkgs; [
     #  thunderbird
@@ -289,13 +354,24 @@
     enableFishIntegration = true;
   };
 
-  # Enable nix-ld for running non-NixOS binaries (needed for Claude Code VSCode extension)
+  # Enable nix-ld for running non-NixOS binaries (needed for Claude Code VSCode extension, Tauri)
   programs.nix-ld = {
     enable = true;
     libraries = with pkgs; [
       stdenv.cc.cc.lib
       zlib
       openssl
+      # Tauri/WebKitGTK
+      gtk3
+      webkitgtk_4_1
+      libappindicator-gtk3
+      librsvg
+      libsoup_3
+      glib
+      cairo
+      pango
+      gdk-pixbuf
+      atk
     ];
   };
 
@@ -327,7 +403,10 @@
 
     # i3/X11 utilities
     xorg.libxcb        # XCB library (for gar WM development)
+    xorg.xinit         # xinit/startx for launching X sessions
+    xorg.xorgserver    # Includes Xephyr for nested X testing
     picom              # X11 compositor (transparency, shadows)
+    polybarFull        # Status bar with all features (i3, pulseaudio, etc.)
     feh                # Wallpaper setter
     maim               # Screenshot tool (X11)
     xdotool            # X11 automation (for window screenshots)
@@ -441,6 +520,30 @@
     lutris          # Game launcher for non-Steam games (GOG, Epic, Wine, etc.)
     dualsensectl    # DualSense controller LED/haptic control
 
+    # Wine/WANDA dependencies
+    wineWowPackages.stable  # Wine with 32-bit support
+    winetricks              # Wine dependency installer
+    steam-run               # FHS environment for running Wine/non-NixOS binaries
+    freetype                # Font library Wine needs
+    fontconfig              # Font configuration
+
+    # WANDA GUI (Tauri) dependencies
+    gtk3
+    webkitgtk_4_1
+    libappindicator-gtk3
+    librsvg
+    libsoup_3
+    glib
+    cairo
+    pango
+    gdk-pixbuf
+    atk
+    pkg-config
+
+    # Node.js for WANDA frontend
+    nodejs_22
+    nodePackages.npm
+
     # Media creation
     audacity        # Audio editing
     reaper          # DAW
@@ -450,9 +553,10 @@
     kdePackages.kdenlive  # Video editing
   ];
 
-  # Fonts (Nerd Font for waybar icons)
+  # Fonts (Nerd Font for waybar icons, Font Awesome for polybar)
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
+    font-awesome
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -467,6 +571,9 @@
 
   # Enable Tailscale VPN
   services.tailscale.enable = true;
+
+  # Cloudflare WARP (bypass carrier throttling)
+  services.cloudflare-warp.enable = true;
 
   # Waydroid (Android container for running Android apps like Kindle)
   virtualisation.waydroid = {
