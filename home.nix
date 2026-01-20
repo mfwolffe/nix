@@ -55,11 +55,32 @@
     interactiveShellInit = ''
       set fish_greeting  # Disable greeting
       pay-respects fish | source
+      gump init fish | source
     '';
     shellAliases = {
       ll = "ls -la";
-      nrs = "sudo nixos-rebuild switch --flake /etc/nixos#mizu";
+      nrs = "cd /etc/nixos && nix flake update mfwolffe-pkgs && sudo nixos-rebuild switch --flake .#mizu";
     };
+  };
+
+  # ──────────────────────────────────────────────────────────────
+  # Bash shell
+  # ──────────────────────────────────────────────────────────────
+  programs.bash = {
+    enable = true;
+    initExtra = ''
+      eval "$(gump init bash)"
+    '';
+  };
+
+  # ──────────────────────────────────────────────────────────────
+  # Zsh shell
+  # ──────────────────────────────────────────────────────────────
+  programs.zsh = {
+    enable = true;
+    initExtra = ''
+      eval "$(gump init zsh)"
+    '';
   };
 
   # ──────────────────────────────────────────────────────────────
@@ -312,12 +333,10 @@
   };
 
   # ──────────────────────────────────────────────────────────────
-  # zoxide (smarter cd)
+  # zoxide (smarter cd) - disabled in favor of gump
   # ──────────────────────────────────────────────────────────────
   programs.zoxide = {
-    enable = true;
-    enableFishIntegration = true;
-    options = [ "--cmd cd" ];  # replace cd entirely
+    enable = false;
   };
 
   # ──────────────────────────────────────────────────────────────
