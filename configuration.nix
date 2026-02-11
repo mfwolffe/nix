@@ -33,6 +33,14 @@
       "garlaunch"   # Application launcher
       "garclip"     # Clipboard manager
       "gardm"       # Display manager (replacing SDDM)
+      "gartray"     # System tray with SNI/XEMBED
+      "garchomp"    # X11 compositor with GPU rendering
+      "garfield"    # File manager with dual-pane
+      "garterm"     # GPU-accelerated terminal
+      "garnotify"   # Notification daemon
+      "gargears"    # Settings/configuration app
+      "gartop"      # System monitor
+      "garview"     # Document viewer (PDF, images)
     ];
   };
 
@@ -188,6 +196,9 @@
     allowNullPassword = true;
     startSession = true;
   };
+
+  # PAM configuration for garlock (screen locker)
+  security.pam.services.garlock = {};
 
   # gardm configuration file
   environment.etc."gardm/config.toml".text = ''
@@ -348,10 +359,9 @@
   # Enable git
   programs.git.enable = true;
 
-  # Enable zoxide (smarter cd)
+  # zoxide (smarter cd) - disabled in favor of gump
   programs.zoxide = {
-    enable = true;
-    enableFishIntegration = true;
+    enable = false;
   };
 
   # Enable nix-ld for running non-NixOS binaries (needed for Claude Code VSCode extension, Tauri)
@@ -554,6 +564,10 @@
 
     # Office
     libreoffice     # Office suite (Writer, Calc, Impress, etc.)
+
+    # AI coding tools
+    codex            # OpenAI Codex CLI
+    code-cursor      # Cursor AI code editor
   ];
 
   # Fonts (Nerd Font for waybar icons, Font Awesome for polybar)
