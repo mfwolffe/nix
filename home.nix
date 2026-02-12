@@ -29,6 +29,7 @@
   # Set SHELL environment variable (needed for zellij)
   home.sessionVariables = {
     SHELL = "${pkgs.fish}/bin/fish";
+    NIXPKGS_ALLOW_UNFREE = "1";
   };
 
   # ──────────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@
   # ──────────────────────────────────────────────────────────────
   programs.zsh = {
     enable = true;
-    initExtra = ''
+    initContent = ''
       eval "$(gump init zsh)"
     '';
   };

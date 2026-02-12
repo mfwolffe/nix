@@ -10,7 +10,7 @@
     };
 
     mfwolffe-pkgs = {
-      url = "github:mfwolffe/nix-packages";
+      url = "path:/home/mfwolffe/GithubOrgs/mfwolffe/nix-packages";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

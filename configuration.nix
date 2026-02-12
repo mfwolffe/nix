@@ -9,6 +9,10 @@
     mfwolffe-pkgs.nixosModules.default
   ];
 
+  nixpkgs.overlays = [
+    mfwolffe-pkgs.overlays.default
+  ];
+
   programs.mfwolffe-packages = {
     enable = true;
     packages = [
@@ -41,6 +45,7 @@
       "gargears"    # Settings/configuration app
       "gartop"      # System monitor
       "garview"     # Document viewer (PDF, images)
+      "garcalc"     # TI-Nspire-like calculator suite
     ];
   };
 
@@ -412,9 +417,9 @@
     waybar             # Status bar
 
     # i3/X11 utilities
-    xorg.libxcb        # XCB library (for gar WM development)
-    xorg.xinit         # xinit/startx for launching X sessions
-    xorg.xorgserver    # Includes Xephyr for nested X testing
+    libxcb             # XCB library (for gar WM development)
+    xinit              # xinit/startx for launching X sessions
+    xorg-server        # Includes Xephyr for nested X testing
     picom              # X11 compositor (transparency, shadows)
     polybarFull        # Status bar with all features (i3, pulseaudio, etc.)
     feh                # Wallpaper setter
