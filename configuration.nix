@@ -2,6 +2,8 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running 'nixos-help').
 
+
+
 { config, pkgs, lib, mfwolffe-pkgs, ... }:
 {
   imports = [
@@ -28,7 +30,7 @@
       "gitswitcher" "gitswitch-c" "shtick" "wmswitch"
       # Python
       "wezztershier" "spotify-cue" "waveterm-vis"
-      # Gardesk suite - X11 desktop environment (https://gar.dev)
+      # Gardesk suite - X11 desktop environment (https://gar.musicsian.com)
       "gar"         # Tiling window manager with Lua config
       "garbar"      # Status bar with Cairo/Pango rendering
       "garbg"       # Wallpaper daemon with video support
@@ -306,6 +308,11 @@
     TERMINAL = "alacritty";
     # Force NVIDIA-only Vulkan to prevent Mesa conflicts
     VK_ICD_FILENAMES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.x86_64.json:/run/opengl-driver-32/share/vulkan/icd.d/nvidia_icd.i686.json";
+
+    # Make pkg-config discover system profile .pc files for cargo builds
+    # run directly from user shells (outside nix develop/shell).
+    PKG_CONFIG_PATH = "/run/current-system/sw/lib/pkgconfig:/run/current-system/sw/share/pkgconfig";
+    PKG_CONFIG_LIBDIR = "/run/current-system/sw/lib/pkgconfig:/run/current-system/sw/share/pkgconfig";
   };
 
   # Enable CUPS to print documents.
@@ -507,6 +514,18 @@
     openssl.dev
     zlib
     zlib.dev
+    glib
+    glib.dev
+    cairo
+    cairo.dev
+    pango
+    pango.dev
+    harfbuzz
+    harfbuzz.dev
+    gdk-pixbuf
+    gdk-pixbuf.dev
+    atk
+    atk.dev
     glfw
     freetype
     fontconfig
